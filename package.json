@@ -1,0 +1,8 @@
+{
+  "name": "sugarcube2-lang",
+  "version": "0.0.1",
+  "description": "language server support for sugarcube2",
+  "main": "index.js",
+  "author": "00500005 <abunchofpretentiousnumbers@gmail.com>",
+  "license": "MIT"
+}
