@@ -1,8 +1,67 @@
 {
-  "name": "sugarcube2-lang",
+  "name": "s3-lang-server",
   "version": "0.0.1",
   "description": "language server support for sugarcube2",
-  "main": "index.js",
   "author": "00500005 <abunchofpretentiousnumbers@gmail.com>",
-  "license": "MIT"
+  "categories": [
+    "Programming Languages"
+  ],
+  "publisher": "s3-lang-tools",
+  "repository": "https://github.com/00500005/s3-lang-tools",
+  "keywords": [
+    "sugarcube",
+    "twee",
+    "twine"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "compile": "tsc",
+    "test": "jest",
+    "vs-package": "vsce package",
+    "vs-publish": "cat access-token | xargs vsce publish -p",
+    "vscode:prepublish": "webpack --mode production",
+    "webpack": "webpack --mode development"
+  },
+  "engines": {
+    "vscode": "^1.42.0"
+  },
+  "activationEvents": [
+    "onLanguage:sugarcube2"
+  ],
+  "main": "./dist/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "sugarcube2",
+        "filenamePatterns": [
+          "*.tw",
+          "*.twee"
+        ]
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "@types/lodash": "^4.14.149",
+    "@types/mathjs": "^6.0.4",
+    "@types/nearley": "^2.11.1",
+    "@types/node": "^13.7.4",
+    "@types/vscode": "^1.42.0",
+    "jest": "^25.2.7",
+    "lodash": "^4.17.15",
+    "mathjs": "^6.6.1",
+    "nearley": "~2.18",
+    "ts-jest": "^25.3.1",
+    "ts-loader": "^6.2.2",
+    "ts-node": "^8.6.2",
+    "tslint": "^5.16.0",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11"
+  },
+  "dependencies": {
+    "typescript": "^3.8.2",
+    "vscode-languageclient": "^6.1.0",
+    "vscode-languageserver": "^6.1.0",
+    "vscode-languageserver-textdocument": "^1.0.1"
+  }
 }

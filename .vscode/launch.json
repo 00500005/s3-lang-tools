@@ -1,0 +1,101 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extensionHost",
+      "request": "launch",
+      "name": "Launch Prod Client",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--folder-uri=${workspaceRoot}/test-workspace",
+        "--extensionDevelopmentPath=${workspaceRoot}",
+      ],
+      "preLaunchTask": {
+        "type": "npm",
+        "script": "vscode:prepublish"
+      }
+    },
+    {
+      "type": "extensionHost",
+      "request": "launch",
+      "name": "Launch Client",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--folder-uri=${workspaceRoot}/test-workspace",
+        "--extensionDevelopmentPath=${workspaceRoot}"
+      ],
+      "preLaunchTask": {
+        "type": "npm",
+        "script": "webpack"
+      }
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Server",
+      "port": 6009,
+      "restart": true,
+      "timeout": 100000,
+      "outFiles": ["${workspaceRoot}/out/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest Debug",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand"],
+      "cwd": "${workspaceRoot}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest debug current test file",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "test",
+        "${fileBasenameNoExtension}",
+        "--runInBand",
+        "--config",
+        "${workspaceFolder}/jest.config.js",
+      ],
+      "cwd": "${workspaceRoot}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "protocol": "inspector",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest debug selected test",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "test",
+        "${fileBasenameNoExtension}",
+        "-t",
+        "${selectedText}",
+        "--runInBand",
+        "--config",
+        "${workspaceFolder}/jest.config.js",
+      ],
+      "cwd": "${workspaceRoot}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "protocol": "inspector",
+    },
+  ],
+  "compounds": [
+    {
+      "name": "Client + Server",
+      "configurations": ["Launch Client", "Attach to Server"]
+    }
+  ]
+}

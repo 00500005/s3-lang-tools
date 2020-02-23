@@ -1,1 +1,13 @@
-lsp-sample/
+test-workspace/
+
+dist/
+node_modules/
+out/
+yarn-error.log
+
+# output package
+*.vsix
+
+# personal access token
+# NOTE: if publishing you'll need to provide one
+access-token
