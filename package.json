@@ -1,6 +1,6 @@
 {
   "name": "s3-lang-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "language server support for sugarcube2",
   "author": "00500005 <abunchofpretentiousnumbers@gmail.com>",
   "categories": [
