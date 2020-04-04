@@ -27,6 +27,7 @@ export function tokenBuilder(
   return <Parser.TokenBuilderResult<TokenType>><any>null;
 }
 const variableNameMatcher = new StickyRegex(/[A-Za-z$_][A-Za-z0-9$_]*/y);
+const allowedAfterDot = new StickyRegex(/[A-Za-z$_]/y);
 const {
     content
 // Note: whitespace is *not* considered content inside of variables
@@ -37,37 +38,44 @@ export function runner(
   state : State,
   lastRule : Yield.Generic,
 ) : Yield.Generic {
-  const rawFirstIndex = lastRule.lastIndex + 1;
-  const firstNonwhitespaceIndex = whitespace.getNextStart(source, rawFirstIndex) || rawFirstIndex;
-  let endOfNameIndex = variableNameMatcher.getEndIndex(source, firstNonwhitespaceIndex);
+  /**
+   * NOTE: as this is a raw variable that may be in mixed content,
+   * whitespace is not allowed between tokens
+   */
+  const firstIndex = lastRule.lastIndex + 1;
+  let endOfNameIndex = variableNameMatcher.getEndIndex(source, firstIndex);
   if (endOfNameIndex) {
     state.dot = false;
-    const afterNameAndWhitespace = whitespace.getNextStart(source, endOfNameIndex + 1) || endOfNameIndex + 1;
-    switch(source[afterNameAndWhitespace]) {
+    const afterName = whitespace.getNextStart(source, endOfNameIndex + 1) || endOfNameIndex + 1;
+    switch(source[afterName]) {
       case '[':
         return Yield.push()
           .setNewState(Yield.Twinescript.State.create(Yield.Twinescript.EndMode.INDEX))
-          .setLastIndex(afterNameAndWhitespace)
+          .setLastIndex(afterName)
           .buildContentToken()
             .setEndIndex(endOfNameIndex)
-            .setStartIndex(firstNonwhitespaceIndex)
+            .setStartIndex(firstIndex)
             .getParent()
           .build();
       case '.':
-        state.dot = true;
-        return Yield.step()
-          .setLastIndex(afterNameAndWhitespace)
-          .buildContentToken()
-            .setEndIndex(endOfNameIndex)
-            .setStartIndex(firstNonwhitespaceIndex)
-            .getParent()
-          .build()
+        const hasNextMatch = allowedAfterDot.matchExists(source, afterName + 1);
+        if (hasNextMatch) {
+          state.dot = true;
+          return Yield.step()
+            .setLastIndex(afterName)
+            .buildContentToken()
+              .setEndIndex(endOfNameIndex)
+              .setStartIndex(firstIndex)
+              .getParent()
+            .build()
+        }
+        // else fall through
       default:
         return Yield.pop()
-          .setLastIndex(afterNameAndWhitespace - 1)
+          .setLastIndex(afterName - 1)
           .buildContentToken()
             .setEndIndex(endOfNameIndex)
-            .setStartIndex(firstNonwhitespaceIndex)
+            .setStartIndex(firstIndex)
             .getParent()
           .build()
     }
@@ -78,14 +86,14 @@ export function runner(
       .build();
     return Yield.pop()
       .addErrors(Err.tokenError(Err.Type.InvalidOperation, errorToken))
-      .setLastIndex(firstNonwhitespaceIndex - 1)
+      .setLastIndex(firstIndex - 1)
       .build();
   } else if (lastRule.token?.tokenType === Twinescript.TokenType) {
-    if (source[firstNonwhitespaceIndex] === '.') {
+    if (source[firstIndex] === '.') {
       state.dot = true;
-      return Yield.step().setLastIndex(firstNonwhitespaceIndex).build();
+      return Yield.step().setLastIndex(firstIndex).build();
     }
-    return Yield.pop().setLastIndex(firstNonwhitespaceIndex - 1).build();
+    return Yield.pop().setLastIndex(firstIndex - 1).build();
   } else {
     // invalid entrance into the variable rule
     throw Err.unexpected({ state, lastRule, source });

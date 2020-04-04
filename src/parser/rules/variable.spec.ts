@@ -17,10 +17,6 @@ describe('variable', () => {
     it.each(transformTestInput<S1>([
       ['foo'],
       ['bar0_$'],
-      ['bar0_$  '],
-      // technically not allowed entry by $ prefix, 
-      //  but no reason to not allow it in the actual rule
-      ['  bar0_$'],
     ]))('should emit pop given: "%s%s"', (varType : VariableType, name: string, [token1] : S1) => {
       state = State.create(varType);
       const [token1StartIndex, token1EndIndex] = trimmedTokenIndicies(token1);
@@ -33,7 +29,6 @@ describe('variable', () => {
     it.each(transformTestInput<S2>([
       ['foo', 'bar'],
       ['bar0_$', 'ba$_'],
-      ['  bar0_$  ', '  ba$_  '],
     ], template('$0.$1')))('should emit step,pop given: "%s%s"', (varType : VariableType, name: string, [token1, token2] : S2) => {
       state = State.create(varType);
       const source = token1 + '.' + token2 + '+ ignored';
@@ -52,7 +47,6 @@ describe('variable', () => {
     it.each(transformTestInput<S2>([
       ['foo', '[bar]'],
       ['bar0_$', '[ba$_]'],
-      ['  bar0_$  ', '  [  ba$_  ]  '],
     ]))('should emit push,pop given: "%s%s"', (varType : VariableType, name : string, [token1, twinescriptToken] : S2) => {
       state = State.create(varType);
       const source = token1 + twinescriptToken + '+ ignored';
@@ -79,7 +73,6 @@ describe('variable', () => {
     it.each(transformTestInput<S3>([
       ['foo', '[bar]', 'baz'],
       ['bar0_$', '[ba$_]', 'ba$_'],
-      ['bar0_$', '   [  ba$_  ]', '  ba$_  '],
     ], template('$0$1.$2')))('should emit push,pop given: "%s%s"', (varType : VariableType, name : string, [token1, twinescriptToken, token2] : [string, string, string]) => {
       state = State.create(varType);
       const source = token1 + twinescriptToken + '.' + token2 + '+ ignored';
@@ -117,6 +110,16 @@ describe('variable', () => {
       Expects.pop(run(source))
         .toEndAt(Index.endOf(token1))
         .toHaveMatchingToken(TokenType.Content, token1StartIndex, token1EndIndex)
+        .toHaveNoOtherErrors()
+    });
+
+    it.each([VariableType.GLOBAL, VariableType.LOCAL])('should allow trailing "." for %s variables', (varType) => {
+      state = State.create(varType);
+      const token = "foo.";
+      Expects.pop(run(token))
+        // don't consume the '.'
+        .toEndAt(Index.endOf(token) - 1)
+        .toHaveMatchingToken(TokenType.Content)
         .toHaveNoOtherErrors()
     });
   });
