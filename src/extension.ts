@@ -63,7 +63,7 @@ function serverOptions(context: ExtensionContext) : ServerOptions {
 function clientOptions() : LanguageClientOptions {
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
-		documentSelector: [{ scheme: 'file', language: 'SugarCube 2', pattern: '*.{tw,twee}' }],
+		documentSelector: [{ scheme: 'file', language: 'sugarcube2', pattern: '*.{tw,twee}' }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
