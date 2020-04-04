@@ -26,13 +26,13 @@
     "vscode": "^1.42.0"
   },
   "activationEvents": [
-    "onLanguage:sugarcube2"
+    "onLanguage:SugarCube 2"
   ],
   "main": "./dist/extension",
   "contributes": {
     "languages": [
       {
-        "id": "sugarcube2",
+        "id": "SugarCube 2",
         "filenamePatterns": [
           "*.tw",
           "*.twee"

@@ -64,7 +64,7 @@ connection.onInitialize((params: InitializeParams) => {
 });
 connection.onInitialized(() => {
 	const documentSelector = [{
-    language: "sugarcube2",
+    language: "SugarCube 2",
 	}]
 	/**
 	 * Some notes
