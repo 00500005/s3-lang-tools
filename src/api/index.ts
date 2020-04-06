@@ -1,2 +1,4 @@
 import { VsSugarcubeParser } from './parse';
-export { VsSugarcubeParser }
+import { SugarcubeDoc } from './doc';
+
+export { VsSugarcubeParser, SugarcubeDoc }

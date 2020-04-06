@@ -60,6 +60,7 @@
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
+    "nanoid": "^3.0.2",
     "typescript": "^3.8.2",
     "vscode-languageclient": "^6.1.0",
     "vscode-languageserver": "^6.1.0",
