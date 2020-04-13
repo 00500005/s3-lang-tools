@@ -37,13 +37,20 @@ export class ManagedSugarcubeDoc {
     this.parser = parser;
     this.taskQueue = taskQueue;
   }
+  raw(uri: string, text: string, groupInitializer?: TextDocumentGroupUpdate): ManagedSugarcubeDocData {
+    this.queueVersion(uri, null, text, groupInitializer)
+    return this.data[uri];
+  }
   open(doc: TextDocumentItem, groupInitializer?: TextDocumentGroupUpdate): ManagedSugarcubeDocData {
     this.queueVersion(doc.uri, doc.version, doc.text, groupInitializer)
     return this.data[doc.uri];
   }
-  close(docId: TextDocumentIdentifier) {
-    this.debugConsole.trace(`Closing ${docId.uri}`);
-    delete this.data[docId.uri];
+  isOpen(uri: string): boolean {
+    return !!this.data[uri]
+  }
+  close(uri: string) {
+    this.debugConsole.trace(`Closing ${uri}`);
+    delete this.data[uri];
   }
   change(
     docId: VersionedTextDocumentIdentifier,
@@ -75,7 +82,16 @@ export class ManagedSugarcubeDoc {
       }
     });
   }
-  queueVersion(uri: string, version: number, text: string, groupInitializer?: TextDocumentGroupUpdate): ParseTaskState {
+  inventVersion(uri: string): number {
+    const doc = this.data[uri];
+    if (doc) {
+      return -(doc.latestVersion + 1);
+    } else {
+      return -1;
+    }
+  }
+  queueVersion(uri: string, rawVersion: number | null, text: string, groupInitializer?: TextDocumentGroupUpdate): ParseTaskState {
+    const version: number = rawVersion === null ? this.inventVersion(uri) : rawVersion;
     const data = this.initializeIfMissing({ uri, version });
     this.debugConsole.throttledTrace(`manager.queue:${data.name}`)(`creating parse task (${text.length})`);
     // this.debugConsole.log(`${data.name}:${version}:\n"""${text}"""`);

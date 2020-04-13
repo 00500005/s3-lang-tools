@@ -6,10 +6,17 @@ import {
   DidChangeTextDocumentNotification,
   DidOpenTextDocumentNotification,
   DidCloseTextDocumentNotification,
+  InitializeResult,
+  DidChangeWatchedFilesNotification,
+  WorkDoneProgressBegin,
+  WorkDoneProgress,
+  FileChangeType,
 } from 'vscode-languageserver';
 import { VsSugarcubeParser, ManagedSugarcubeDoc } from './api';
 import { TaskQueue } from './manager';
 import { DebugConsole } from './config/log';
+import { queueFiles, filesFromRoot, readFileAsync } from './manager/file-scanner';
+import { nanoid } from 'nanoid/non-secure';
 
 let connection = createConnection(ProposedFeatures.all);
 const debugConsole = DebugConsole.extend(connection.console);
@@ -22,8 +29,8 @@ const docs = new ManagedSugarcubeDoc(
   taskQueue
 );
 
-connection.onInitialize((params: InitializeParams) => {
-  return {
+connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
+  const results: InitializeResult = {
     capabilities: {
       textDocumentSync: {
         openClose: true,
@@ -31,6 +38,18 @@ connection.onInitialize((params: InitializeParams) => {
       }
     }
   };
+  if (params.rootPath) {
+    const files = await filesFromRoot(params.rootPath);
+    if (files.length) {
+      const progressToken = nanoid();
+      connection.sendProgress(WorkDoneProgress.type, progressToken, <WorkDoneProgressBegin>{
+        title: 'Scanning workspace files'
+      })
+      await queueFiles(debugConsole, docs, progressToken, files)
+      debugConsole.log(`Scanning ${files.length} files on load`)
+    }
+  }
+  return results;
 });
 connection.onInitialized(() => {
   const documentSelector = [{
@@ -46,8 +65,28 @@ connection.onInitialized(() => {
   connection.client.register(DidCloseTextDocumentNotification.type, {
     documentSelector
   });
-})
-
+  connection.client.register(DidChangeWatchedFilesNotification.type, {
+    watchers: [{ globPattern: '**/*.{tw,twee}' }]
+  });
+});
+connection.onDidChangeWatchedFiles(async params => {
+  const deletedFiles = params.changes.filter(p => p.type === FileChangeType.Deleted).map(p => p.uri)
+  const updatedFiles = params.changes
+    .filter(p => !docs.isOpen(p.uri))
+    .filter(p => p.type !== FileChangeType.Deleted)
+    .map(p => p.uri)
+  if (deletedFiles.length) {
+    deletedFiles.forEach(uri => docs.close(uri))
+  }
+  if (updatedFiles.length) {
+    const progressToken = nanoid();
+    connection.sendProgress(WorkDoneProgress.type, progressToken, <WorkDoneProgressBegin>{
+      title: 'Scanning workspace files'
+    })
+    await queueFiles(debugConsole, docs, progressToken, updatedFiles)
+  }
+  debugConsole.log(`Queued ${updatedFiles.length} file updates (for unopened files). Closed ${deletedFiles.length} files`)
+});
 connection.onDidOpenTextDocument(async params => {
   const doc = docs.open(params.textDocument);
   debugConsole.trace(`Opening ${doc.name}`)
@@ -56,7 +95,7 @@ connection.onDidChangeTextDocument(async params => {
   docs.change(params.textDocument, params.contentChanges);
 });
 connection.onDidCloseTextDocument(async params => {
-  docs.close(params.textDocument)
+  docs.close(params.textDocument.uri)
 });
 
 
