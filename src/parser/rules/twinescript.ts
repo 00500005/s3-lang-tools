@@ -11,12 +11,12 @@ export type EndMode = Yield.Twinescript.EndMode;
 export const EndMode = Yield.Twinescript.EndMode;
 
 export function tokenBuilder(
-  source : Source,
-  state : State,
-  tokens : Token[],
-  startIndex : StartIndex,
-  endIndex : EndIndex,
-) : Parser.TokenBuilderResult<TokenType> { 
+  source: Source,
+  state: State,
+  tokens: Token[],
+  startIndex: StartIndex,
+  endIndex: EndIndex,
+): Parser.TokenBuilderResult<TokenType> {
   const token = Twinescript.builder()
     .setStartIndex(startIndex)
     .setEndIndex(endIndex)
@@ -28,7 +28,7 @@ export function tokenBuilder(
   }
 }
 
-const keywords : string[] = [
+const keywords: string[] = [
   '=',
   '\\+=',
   '-=',
@@ -80,6 +80,7 @@ const keywords : string[] = [
   'new',
   'class',
   '\\.\\.\\.',
+  '\\.',
   'delete',
   'to',
   'eq',
@@ -102,10 +103,10 @@ const match = {
 }
 
 export function runner(
-  source : Source, 
-  state : State,
-  lastRule : Yield.Generic,
-) : Yield.Generic {
+  source: Source,
+  state: State,
+  lastRule: Yield.Generic,
+): Yield.Generic {
   const firstNonwhitespaceIndex = whitespace.getNextStart(source, lastRule.lastIndex + 1) || lastRule.lastIndex + 1;
   const endMatchIndex = getEndMatchIndex();
   if (endMatchIndex !== null) {
@@ -116,20 +117,20 @@ export function runner(
     return Yield.step()
       .setLastIndex(keywordIndex)
       .buildContentToken()
-        .setStartIndex(firstNonwhitespaceIndex)
-        .setEndIndex(keywordIndex)
-        .getParent()
+      .setStartIndex(firstNonwhitespaceIndex)
+      .setEndIndex(keywordIndex)
+      .getParent()
       .build()
   } else if (javascriptIdentifierIndex = match.javascriptId.getEndIndex(source, firstNonwhitespaceIndex)) {
     return Yield.step()
       .setLastIndex(javascriptIdentifierIndex)
       .buildContentToken()
-        .setStartIndex(firstNonwhitespaceIndex)
-        .setEndIndex(javascriptIdentifierIndex)
-        .getParent()
+      .setStartIndex(firstNonwhitespaceIndex)
+      .setEndIndex(javascriptIdentifierIndex)
+      .getParent()
       .build()
   } else {
-    switch(source[firstNonwhitespaceIndex]) {
+    switch (source[firstNonwhitespaceIndex]) {
       case '[':
         const enterTwinemarkup = maybeTwinemarkup(source, firstNonwhitespaceIndex + 1);
         return enterTwinemarkup || reenterTwinescript(EndMode.ARRAY);
@@ -147,7 +148,7 @@ export function runner(
         return variableOrContentChar(source, firstNonwhitespaceIndex + 1, Variable.Type.LOCAL);
       default:
         let numberEndIndex, jsIdEndIndex;
-        if(numberEndIndex = match.number.getEndIndex(source, firstNonwhitespaceIndex)) {
+        if (numberEndIndex = match.number.getEndIndex(source, firstNonwhitespaceIndex)) {
           return content(numberEndIndex)
         } else if (jsIdEndIndex = match.javascriptId.getEndIndex(source, firstNonwhitespaceIndex)) {
           return content(jsIdEndIndex)
@@ -155,7 +156,7 @@ export function runner(
         return unexpectedToken(source, firstNonwhitespaceIndex);
     }
   }
-  function content(endIndex : number) : Yield.Step {
+  function content(endIndex: number): Yield.Step {
     const token = Content.builder()
       .setStartIndex(firstNonwhitespaceIndex)
       .setEndIndex(endIndex)
@@ -165,7 +166,7 @@ export function runner(
       .setToken(token)
       .build()
   }
-  function variableOrContentChar(source : Source, firstNonwhitespaceIndex : EndIndex, variableType : Variable.Type) : Yield.Generic {
+  function variableOrContentChar(source: Source, firstNonwhitespaceIndex: EndIndex, variableType: Variable.Type): Yield.Generic {
     const yieldVar = maybeVariable(source, firstNonwhitespaceIndex, variableType);
     if (yieldVar) {
       return yieldVar;
@@ -173,7 +174,7 @@ export function runner(
       return content(firstNonwhitespaceIndex);
     }
   }
-  function unexpectedToken(source : Source, firstNonwhitespaceIndex : EndIndex) : Yield.Step {
+  function unexpectedToken(source: Source, firstNonwhitespaceIndex: EndIndex): Yield.Step {
     const endOfUnknownTokenIndex = match.unknownToken.getEndIndex(source, firstNonwhitespaceIndex) || firstNonwhitespaceIndex;
     const token = Content.builder()
       .setStartIndex(firstNonwhitespaceIndex)
@@ -185,14 +186,14 @@ export function runner(
       .addErrors(Err.tokenError(Err.Type.UnexpectedToken, token))
       .build()
   }
-  function reenterTwinescript(endMode : EndMode) : Yield.Push {
+  function reenterTwinescript(endMode: EndMode): Yield.Push {
     return Yield.push()
       .setLastIndex(firstNonwhitespaceIndex)
       .setNewState(State.create(endMode))
       .build();
   }
 
-  function getEndMatchIndex() : EndIndex | null {
+  function getEndMatchIndex(): EndIndex | null {
     switch (state.endMode) {
       case EndMode.ARRAY:
       case EndMode.INDEX:
@@ -213,14 +214,14 @@ export function runner(
   }
 }
 
-export function unexpectedEnd(startIndex : StartIndex, state : Partial<Yield.AnyState>) {
+export function unexpectedEnd(startIndex: StartIndex, state: Partial<Yield.AnyState>) {
   return Err.unrecoverable(Err.Type.UnclosedTwinescript, startIndex, {
     message: `expected ${state.endMode} token`
   });
 }
 
-export const Definition : Parser.Definition<State, TokenType> = {
-    type : Yield.Macro.Type,
-    runner,
-    tokenBuilder,
+export const Definition: Parser.Definition<State, TokenType> = {
+  type: Yield.Macro.Type,
+  runner,
+  tokenBuilder,
 }
