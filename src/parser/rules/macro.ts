@@ -8,16 +8,17 @@ export const State = Yield.Macro.State;
 export type EndMode = Yield.Macro.EndMode;
 export const EndMode = Yield.Macro.EndMode;
 export function tokenBuilder(
-  source : Source,
-  state : Yield.Macro.State, 
-  tokens : Token[],
-  startIndex : StartIndex,
-  endIndex : EndIndex,
-) : Parser.TokenBuilderResult<Macro.Token> { 
+  source: Source,
+  state: Yield.Macro.State,
+  tokens: Token[],
+  startIndex: StartIndex,
+  endIndex: EndIndex,
+): Parser.TokenBuilderResult<Macro.Token> {
   const builder = Macro.builder()
-      .setStartIndex(startIndex)
-      .setEndIndex(endIndex)
-      .setArgs(tokens.slice(1));
+    .setStartIndex(startIndex)
+    .setEndIndex(endIndex)
+    .setMacroType(state.macroType || Macro.Type.INVALID)
+    .setArgs(tokens.slice(1));
   if (state.macroType === undefined || tokens.length === 0) {
     const token = builder
       .setMacroType(Macro.Type.INVALID)
@@ -28,7 +29,7 @@ export function tokenBuilder(
       errors: [Err.tokenError(Err.Type.MissingMacroName, token)]
     }
   }
-  switch(state.macroType) {
+  switch (state.macroType) {
     case Macro.Type.INVALID:
       return {
         result: builder.setMacroName(state.macroName || Macro.Type.INVALID).build(),
@@ -48,26 +49,24 @@ export function tokenBuilder(
       throw Err.unexpected({ source, state, startIndex, endIndex, tokens })
   }
   return {
-    result: builder
-      .setMacroType(state.macroType)
-      .build()
+    result: builder.build()
   }
 }
 const {
-    variableOrContent,
-    twinemarkupOrTwinescript,
-    content
-// Note: whitespace is *not* considered content inside of macros
-// arg tokens will be whitespace delimited
+  variableOrContent,
+  twinemarkupOrTwinescript,
+  content
+  // Note: whitespace is *not* considered content inside of macros
+  // arg tokens will be whitespace delimited
 } = scanners(new StickyRegex(/[^\[$_'"`>\s]*/y));
 const validMacroNameMatcher = new StickyRegex(/[A-Za-z][A-Za-z0-9$_]*/y);
 const macroEndMatcher = new StickyRegex(/\s*([A-Za-z0-9$_]*)\s*>>/y);
 const macroInvocationEndMatcher = new StickyRegex(/\s*>>/y);
 export function runner(
-  source : Source, 
-  state : Yield.Macro.State,
-  lastRule : Yield.Generic,
-) : Yield.Generic {
+  source: Source,
+  state: Yield.Macro.State,
+  lastRule: Yield.Generic,
+): Yield.Generic {
   // throw Err.unexpected({ source, state, lastRule })
   if (state.endMode !== Yield.Macro.EndMode.MACROENTRY) {
     throw Err.unexpected({ source, state, lastRule })
@@ -76,20 +75,23 @@ export function runner(
   const rawFirstIndex = lastRule.lastIndex + 1;
   const currentIndex = whitespace.getNextStart(source, rawFirstIndex) || rawFirstIndex;
   const nextIndex = currentIndex + 1;
-  switch(source[currentIndex]) {
+  switch (source[currentIndex]) {
     case '[':
       // indexing should only be allowed as part of a variable
-      const maybeMarkup = maybeTwinemarkup(source, currentIndex);
-      if(maybeMarkup) {
+      const maybeMarkup = maybeTwinemarkup(source, nextIndex);
+      if (maybeMarkup) {
         return maybeMarkup;
       } else {
-        const yieldContent = content(source, currentIndex, nextIndex);
-        yieldContent.errors = [Err.tokenError(
-            Err.Type.InvalidArgument, 
-            yieldContent.token,
-            { message: `Unexpected javascript/twinescript index []` }
-        )]
+        return Yield.push()
+          .setLastIndex(currentIndex)
+          .setNewState(Yield.Twinescript.State.create(Yield.Twinescript.EndMode.ARRAY))
+          .build();
       }
+    case '{':
+      return Yield.push()
+        .setLastIndex(currentIndex)
+        .setNewState(Yield.Twinescript.State.create(Yield.Twinescript.EndMode.BRACE))
+        .build();
     case '$':
       return variableOrContent(Variable.Type.GLOBAL, source, currentIndex, nextIndex);
     case '_':
@@ -121,19 +123,19 @@ export function runner(
           return Yield.pop()
             .setLastIndex(endIndex)
             .buildContentToken()
-              .setStartIndex(nextIndex)
-              .setEndIndex(endIndex)
-              .getParent()
+            .setStartIndex(nextIndex)
+            .setEndIndex(endIndex)
+            .getParent()
             .build()
         }
       }
-      // maybe endwidget invocation
+    // maybe endwidget invocation
     default:
       if (state.macroType === undefined) {
         const [endIndex, match] = validMacroNameMatcher.getMatchAndEndIndex(source, currentIndex);
         if (match && endIndex) {
           const macroType = Macro.keyword(match);
-          switch(macroType) {
+          switch (macroType) {
             case Macro.Type.JAVASCRIPT:
               state.macroType = macroType;
               state.macroName = 'script';
@@ -148,22 +150,22 @@ export function runner(
                 return Yield.goto()
                   .setLastIndex(endOfInvocation)
                   .buildContentToken()
-                    .setStartIndex(currentIndex)
-                    .setEndIndex(endIndex)
-                    .getParent()
+                  .setStartIndex(currentIndex)
+                  .setEndIndex(endIndex)
+                  .getParent()
                   .setNewState(Yield.Javascript.State.create())
                   .build()
               }
-              case Macro.Type.USER:
-                state.macroType = macroType;
-                state.macroName = match;
-                return Yield.step()
-                  .setLastIndex(endIndex)
-                  .buildContentToken()
-                    .setStartIndex(currentIndex)
-                    .setEndIndex(endIndex)
-                    .getParent()
-                  .build()
+            case Macro.Type.USER:
+              state.macroType = macroType;
+              state.macroName = match;
+              return Yield.step()
+                .setLastIndex(endIndex)
+                .buildContentToken()
+                .setStartIndex(currentIndex)
+                .setEndIndex(endIndex)
+                .getParent()
+                .build()
             default:
               throw Err.unexpected({ source, state, lastRule, atIndex: currentIndex })
           }
@@ -176,12 +178,12 @@ export function runner(
   }
 }
 
-export function unexpectedEnd(startIndex : StartIndex, state : Partial<Yield.AnyState>) {
+export function unexpectedEnd(startIndex: StartIndex, state: Partial<Yield.AnyState>) {
   return Err.unrecoverable(Err.Type.UnclosedMacroInvocation, startIndex);
 }
 
-export const Definition : Parser.Definition<Yield.Macro.State, Macro.Token> = {
-    type : Yield.Macro.Type,
-    runner,
-    tokenBuilder,
+export const Definition: Parser.Definition<Yield.Macro.State, Macro.Token> = {
+  type: Yield.Macro.Type,
+  runner,
+  tokenBuilder,
 }

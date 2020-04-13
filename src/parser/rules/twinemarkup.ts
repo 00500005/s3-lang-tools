@@ -1,7 +1,5 @@
 import { Parser, Source, Token, EndIndex, StartIndex, Yield, Macro, Variable, Err, Twinemarkup, Content, Twinescript } from '../types';
-import { scanners, handleDoubleQuote, handleSingleQuote, whitespace, maybeTwinemarkup, handleQuoteScanResult } from './scanners.util';
 import { StickyRegex } from './util';
-import { setPriority } from 'os';
 
 export type State = Yield.Twinemarkup.State;
 export const State = Yield.Twinemarkup.State;
@@ -13,12 +11,12 @@ export type MarkupMode = Yield.Twinemarkup.MarkupMode;
 export const MarkupMode = Yield.Twinemarkup.MarkupMode;
 
 export function tokenBuilder(
-  source : Source,
-  state : State,
-  tokens : Token[],
-  startIndex : StartIndex,
-  endIndex : EndIndex,
-) : Parser.TokenBuilderResult<TokenType> { 
+  source: Source,
+  state: State,
+  tokens: Token[],
+  startIndex: StartIndex,
+  endIndex: EndIndex,
+): Parser.TokenBuilderResult<TokenType> {
   const tokenBuilder = Twinemarkup.builder(state.markupType)
     .setImagePath(state.imgpath)
     .setMarkupLink(state.link)
@@ -26,7 +24,7 @@ export function tokenBuilder(
     .setStartIndex(startIndex)
     .setEndIndex(endIndex)
   if (state.nextMode !== MarkupMode.NO_MORE) {
-    const result = Err.unrecoverable(Err.Type.UnexpectedInvocation, startIndex) ;
+    const result = Err.unrecoverable(Err.Type.UnexpectedInvocation, startIndex);
     return { result };
   }
 
@@ -36,7 +34,7 @@ export function tokenBuilder(
       tokenBuilder.setMarkupSetter(<Twinescript.Token>tokens[0])
     } else {
       errors.push(Err.tokenError(Err.Type.UnexpectedToken, tokens[0]))
-    } 
+    }
     if (tokens.length > 1) {
       errors.push(Err.tokenError(Err.Type.UnexpectedToken, tokens[1]))
     }
@@ -59,10 +57,10 @@ enum MarkupModeEndType {
   Unclosed = "Unclosed"
 }
 export function runner(
-  source : Source, 
-  state : State,
-  lastRule : Yield.Generic,
-) : Yield.Generic {
+  source: Source,
+  state: State,
+  lastRule: Yield.Generic,
+): Yield.Generic {
   const startIndex = lastRule.lastIndex + 1;
   if (state.nextMode === MarkupMode.SETTER_OR_END) {
     const endIndex = hasImmediateEnd.getEndIndex(source, startIndex);
@@ -76,10 +74,10 @@ export function runner(
       .setNewStateStartIndex(startIndex)
       .build()
   }
-  const [contentMatchEndIndex, content] : [EndIndex, string] = 
+  const [contentMatchEndIndex, content]: [EndIndex, string] =
     <[EndIndex, string]>contentMatcher.getMatchAndEndIndex(source, startIndex);
   if (contentMatchEndIndex === null) { return unclosed(startIndex) }
-  switch(state.nextMode) {
+  switch (state.nextMode) {
     case MarkupMode.LINK_START:
       return handleStart(MarkupMode.SETTER_OR_END, "link");
     case MarkupMode.IMG_START:
@@ -87,9 +85,9 @@ export function runner(
     case MarkupMode.TWINESCRIPT_END:
       return pop(lastRule.lastIndex);
     case MarkupMode.IMG_LINK_OR_END: {
-      const [ endType, endIndex ] = whichEndType()
+      const [endType, endIndex] = whichEndType()
       state.link = content.trim();
-      switch(endType) {
+      switch (endType) {
         case MarkupModeEndType.FullEnd:
           return pop(endIndex!);
         case MarkupModeEndType.NewMode:
@@ -101,7 +99,7 @@ export function runner(
   }
   throw Err.unexpected({ source, lastRule, state });
 
-  function handleStart(nextMode : MarkupMode, linkOrPath : string) : Yield.Generic {
+  function handleStart(nextMode: MarkupMode, linkOrPath: string): Yield.Generic {
     const titlePipeMatch = hasTitlePipeMatcher.execAt(source, startIndex);
     if (titlePipeMatch === null) {
       (<any>state)[linkOrPath] = content.trim();
@@ -110,7 +108,7 @@ export function runner(
       (<any>state)[linkOrPath] = titlePipeMatch[2].trim();
     }
     const [endType, endIndex] = whichEndType();
-    switch(endType) {
+    switch (endType) {
       case MarkupModeEndType.NewMode:
         return step(nextMode, endIndex!)
       case MarkupModeEndType.FullEnd:
@@ -119,7 +117,7 @@ export function runner(
         return unclosed(startIndex)
     }
   }
-  function whichEndType() : [MarkupModeEndType, EndIndex | null] {
+  function whichEndType(): [MarkupModeEndType, EndIndex | null] {
     const hasNewModeIndex = hasNewModeAfterContentMatcher.getEndIndex(source, contentMatchEndIndex + 2);
     if (hasNewModeIndex !== null) {
       return [MarkupModeEndType.NewMode, hasNewModeIndex];
@@ -130,31 +128,31 @@ export function runner(
     }
     return [MarkupModeEndType.Unclosed, null];
   }
-  function step(nextMode : MarkupMode, endIndex : EndIndex) : Yield.Step {
+  function step(nextMode: MarkupMode, endIndex: EndIndex): Yield.Step {
     state.nextMode = nextMode;
     return Yield.step()
       .setLastIndex(endIndex)
       .build();
   }
-  function pop(endIndex : EndIndex) : Yield.Pop {
+  function pop(endIndex: EndIndex): Yield.Pop {
     state.nextMode = MarkupMode.NO_MORE;
     return Yield.pop()
       .setLastIndex(endIndex)
       .build()
   }
-  function unclosed(startIndex : StartIndex) : Yield.Unrecoverable {
+  function unclosed(startIndex: StartIndex): Yield.Unrecoverable {
     return Yield.unrecoverable()
       .setCriticalError(Err.unrecoverable(Err.Type.UnclosedTwinemarkup, startIndex))
       .build();
   }
 }
 
-export function unexpectedEnd(startIndex : StartIndex, state : Partial<Yield.AnyState>) {
+export function unexpectedEnd(startIndex: StartIndex, state: Partial<Yield.AnyState>) {
   return Err.unrecoverable(Err.Type.UnclosedTwinemarkup, startIndex);
 }
 
-export const Definition : Parser.Definition<State, TokenType> = {
-    type : Yield.Macro.Type,
-    runner,
-    tokenBuilder,
+export const Definition: Parser.Definition<State, TokenType> = {
+  type: Yield.Macro.Type,
+  runner,
+  tokenBuilder,
 }

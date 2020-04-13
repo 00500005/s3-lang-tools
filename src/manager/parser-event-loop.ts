@@ -33,7 +33,7 @@ export class TaskQueue {
   tasks: Record<string, InternalTask> = {};
   queues: [InternalTask[], InternalTask[], InternalTask[]] = [[], [], []];
   selectedQueue: Priority | null = null;
-  currentRun: Promise<null> | null = null;
+  currentRun: Promise<any> | null = null;
 
   get currentQueue(): InternalTask[] | undefined {
     return this.queues[this.selectedQueue || -1]
@@ -61,7 +61,7 @@ export class TaskQueue {
     if (!this.currentRun) {
       this.currentRun = new Promise((resolve, reject) => {
         setImmediate(this._run, Date.now(), resolve, reject)
-      }).then(() => this.currentRun = null);
+      }).finally(() => this.currentRun = null);
     }
     return this.currentRun;
   }

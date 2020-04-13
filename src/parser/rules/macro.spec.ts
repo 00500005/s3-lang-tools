@@ -6,12 +6,12 @@ import { Expects, Setup, Index } from './rule-test.util';
 describe('macro', () => {
   describe('runner', () => {
     describe('script', () => {
-      let state : State;
+      let state: State;
       const run = Setup.createDefaultRunner(runner, () => {
         return state = State.create(Yield.Macro.EndMode.MACROENTRY)
       });
       it.each([
-        'script>>', 
+        'script>>',
         '\t script \t>>'
       ])('should enter script and consume the token of: "%s"', (entryToken) => {
         Expects.goto(run(entryToken + ' ignored'))
@@ -23,7 +23,7 @@ describe('macro', () => {
         [' scrip', 1],
         ['  script_', 2],
         ['scriptr', 0]
-      ])('should enter user macro and consume 1 token of: "%s"', (testToken, startAt : StartIndex) => {
+      ])('should enter user macro and consume 1 token of: "%s"', (testToken, startAt: StartIndex) => {
         Expects.step(run(testToken + ' ignored'))
           .toEndAt(Index.endOf(testToken))
           .toHaveMatchingToken(Content.TokenType, startAt)
@@ -33,7 +33,7 @@ describe('macro', () => {
       });
     });
     describe('user macro arguments', () => {
-      let state : State;
+      let state: State;
       const run = Setup.createDefaultRunner(runner, () => {
         state = State.create(Yield.Macro.EndMode.MACROENTRY)
         state.macroType = Yield.Macro.MacroType.USER;
@@ -77,7 +77,7 @@ describe('macro', () => {
           ['$a'],
           ['$B0_$'],
           ['  $z', 2],
-        ])('should enter global variable on: "%s"', (testToken, startAt: number=0) => {
+        ])('should enter global variable on: "%s"', (testToken, startAt: number = 0) => {
           Expects.push(run(testToken + ' ignored'))
             .toEndAt(startAt + Index.endOf('$'))
             .toHaveState(Yield.Variable.Type, { variableType: Yield.Variable.VariableType.GLOBAL })
@@ -87,7 +87,7 @@ describe('macro', () => {
           ['_a'],
           ['_B0_$'],
           ['  _z', 2],
-        ])('should enter local variable on: "%s"', (testToken, startAt : number = 0) => {
+        ])('should enter local variable on: "%s"', (testToken, startAt: number = 0) => {
           Expects.push(run(testToken + ' ignored'))
             .toEndAt(startAt + Index.endOf('_'))
             .toHaveState(Yield.Variable.Type, { variableType: Yield.Variable.VariableType.LOCAL })
@@ -107,16 +107,23 @@ describe('macro', () => {
         // TODO: emit warning on $$
       });
       describe('twinescript args', () => {
-        it.each([ ['`'], ['  `'], ])('should enter a twinescript expression on: "%s"', (testToken) => {
+        it.each([
+          ['`', Yield.Twinescript.EndMode.QUOTE],
+          ['  `', Yield.Twinescript.EndMode.QUOTE],
+          ['[', Yield.Twinescript.EndMode.ARRAY],
+          ['  [', Yield.Twinescript.EndMode.ARRAY],
+          ['{', Yield.Twinescript.EndMode.BRACE],
+          ['  {', Yield.Twinescript.EndMode.BRACE],
+        ])('should enter a twinescript expression on: "%s"', (testToken, endMode) => {
           Expects.push(run(testToken + ' ignored'))
             .toEndAt(Index.endOf(testToken))
-            .toHaveState(Yield.Twinescript.Type, { endMode: Yield.Twinescript.EndMode.QUOTE })
+            .toHaveState(Yield.Twinescript.Type, { endMode })
             .toHaveNoOtherErrors();
         });
       });
     });
     describe('end macro', () => {
-      let state : State;
+      let state: State;
       const run = Setup.createDefaultRunner(runner, () => {
         return state = State.create(Yield.Macro.EndMode.MACROENTRY)
       });
@@ -132,7 +139,7 @@ describe('macro', () => {
         expect(state.macroName).toEqual(name)
         expect(state.macroType).toEqual(Macro.Type.END)
       });
-      
+
     });
   });
   describe('tokenBuilder', () => {
@@ -150,20 +157,20 @@ describe('macro', () => {
         // outside of the returned tokens
         const startIndex = 5;
         const endIndex = 500;
-        
+
         const resultingToken = buildContentTokenInvocation(10)
           .addRawToken("<<")
           .addToken(macroName, <any>name1)
           .addRawToken(">>")
           .buildTestTargetToken(undefined, startIndex, endIndex);
         Expects.tokenResult(resultingToken)
-          .toHaveTokenEqualTo(<Macro.Token>{ 
-            tokenType: Macro.TokenType, 
+          .toHaveTokenEqualTo(<Macro.Token>{
+            tokenType: Macro.TokenType,
             macroType: Macro.Type.USER,
-            startIndex, endIndex, 
-            name: macroName, 
-            content: [], 
-            args: [], 
+            startIndex, endIndex,
+            name: macroName,
+            content: [],
+            args: [],
           })
           .toHaveNoOtherErrors()
       });
@@ -198,11 +205,11 @@ describe('macro', () => {
           .buildTestTargetToken(undefined, startIndex, endIndex);
         Expects.tokenResult(resultingToken)
           .toHaveTokenEqualTo(<Macro.Token>{
-            tokenType: Macro.TokenType, 
+            tokenType: Macro.TokenType,
             macroType: Macro.Type.USER,
-            startIndex, endIndex, 
-            name: macroName, 
-            content: [], 
+            startIndex, endIndex,
+            name: macroName,
+            content: [],
             args: [
               var1.build(),
               content1.build(),

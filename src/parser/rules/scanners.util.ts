@@ -1,13 +1,13 @@
-import { Source, StartIndex, EndIndex, Err, Yield, String, Variable, Twinescript } from "../types";
+import { Source, StartIndex, EndIndex, Err, Yield, String, Variable, Twinescript, Twinemarkup } from "../types";
 import { Maybe, StickyRegex } from './util'
 
 export function maybeMacroOrTwinescript(
-  source : Source, 
-  startIndex : StartIndex, 
-) : Yield.Push | undefined {
-  switch(source[startIndex]) {
+  source: Source,
+  startIndex: StartIndex,
+): Yield.Push | undefined {
+  switch (source[startIndex]) {
     case '<':
-      switch(source[startIndex + 1]) {
+      switch (source[startIndex + 1]) {
         case '-':
         case '=':
           return Yield.push()
@@ -30,14 +30,14 @@ const script = "script";
 const SCRIPT = "SCRIPT";
 /** @deprecated */
 export function maybeScript(
-  source : Source, 
-  startIndex : StartIndex, 
-) : Yield.Goto | undefined {
+  source: Source,
+  startIndex: StartIndex,
+): Yield.Goto | undefined {
   /** @todo replace with regex as lookahead support is no longer needed */
   let nextIndex = startIndex;
   let scriptNameIndex = 0;
-  while(nextIndex < source.length) {
-    switch(source[nextIndex++]) {
+  while (nextIndex < source.length) {
+    switch (source[nextIndex++]) {
       case ' ':
       case '\t':
       case '\n':
@@ -68,60 +68,32 @@ export function maybeScript(
 export const whitespace = new StickyRegex(/\s*/y);
 const IMG = 'IMG';
 const img = 'img';
+const twinemarkupRegex = new StickyRegex(/\s*(img)?\s*\[/y)
 export function maybeTwinemarkup(
-  source : Source, 
-  startIndex : StartIndex
-) : Yield.Push | undefined {
-  /** @todo replace with regex */
-  let currentIndex = startIndex;
-  let tryEnterImage = false;
-  let nextExpectedImageChar = 0;
-MainLoop:
-  while(currentIndex < source.length) {
-    switch(source[currentIndex]) {
-      case ' ':
-      case '\t':
-      case '\n':
-      case '\r':
-        currentIndex++; continue;
-      case '[':
-        if (tryEnterImage) {
-          return Yield.push()
-            .setLastIndex(currentIndex)
-            .setNewState(Yield.Twinemarkup.State.create(Yield.Twinemarkup.MarkupType.IMAGE))
-            .setNewStateStartIndex(startIndex - 1)
-            .build();
-        } else {
-          return Yield.push()
-            .setLastIndex(currentIndex)
-            .setNewState(Yield.Twinemarkup.State.create(Yield.Twinemarkup.MarkupType.LINK))
-            .setNewStateStartIndex(startIndex - 1)
-            .build();
-        }
-      // TODO: manually unroll this
-      case img[nextExpectedImageChar]:
-      case IMG[nextExpectedImageChar]:
-        nextExpectedImageChar++;
-        if (nextExpectedImageChar === img.length) {
-          tryEnterImage = true;
-        }
-        currentIndex++; continue;
-      default:
-        break MainLoop;
-    }
+  source: Source,
+  startIndex: StartIndex
+): Yield.Push | undefined {
+  const [match, endIndex] = twinemarkupRegex.execAndEndIndexAt(source, startIndex);
+  if (match) {
+    const markupType = match[1] ? Twinemarkup.Type.IMAGE : Twinemarkup.Type.LINK
+    return Yield.push()
+      .setLastIndex(endIndex!)
+      .setNewState(Yield.Twinemarkup.State.create(markupType))
+      .build();
+  } else {
+    return undefined;
   }
-  return undefined;
 }
 
-const DOUBLE_QUOTE_MATCHER =           /(?:(?:[^"\\]|\\["bfnrt\/\\\n]|\\u[a-fA-F0-9]{4})*")/y;
-const DOUBLE_QUOTE_LIBERAL_MATCHER =   /(?:(?:[^"\\]|\\.)*")/y;
-const SINGLE_QUOTE_MATCHER =           /(?:(?:[^'\\]|\\['bfnrt\/\\\n]|\\u[a-fA-F0-9]{4})*')/y;
-const SINGLE_QUOTE_LIBERAL_MATCHER =   /(?:(?:[^'\\]|\\.)*')/y;
+const DOUBLE_QUOTE_MATCHER = /(?:(?:[^"\\]|\\["bfnrt\/\\\n]|\\u[a-fA-F0-9]{4})*")/y;
+const DOUBLE_QUOTE_LIBERAL_MATCHER = /(?:(?:[^"\\]|\\.)*")/y;
+const SINGLE_QUOTE_MATCHER = /(?:(?:[^'\\]|\\['bfnrt\/\\\n]|\\u[a-fA-F0-9]{4})*')/y;
+const SINGLE_QUOTE_LIBERAL_MATCHER = /(?:(?:[^'\\]|\\.)*')/y;
 
 export function scanDoubleQuote(
-  source : Source, 
-  afterQuoteStart : StartIndex, 
-) : EndIndex | Err.ParserError {
+  source: Source,
+  afterQuoteStart: StartIndex,
+): EndIndex | Err.ParserError {
   DOUBLE_QUOTE_MATCHER.lastIndex = afterQuoteStart;
   const result = DOUBLE_QUOTE_MATCHER.exec(source);
   if (result) {
@@ -130,7 +102,7 @@ export function scanDoubleQuote(
     DOUBLE_QUOTE_LIBERAL_MATCHER.lastIndex = afterQuoteStart;
     const recoveryResult = DOUBLE_QUOTE_LIBERAL_MATCHER.exec(source);
     if (recoveryResult) {
-      return Err.tokenError(Err.Type.InvalidString, 
+      return Err.tokenError(Err.Type.InvalidString,
         String.builder(String.Type.DOUBLE)
           .setStartIndex(afterQuoteStart - 1)
           .setEndIndex(DOUBLE_QUOTE_LIBERAL_MATCHER.lastIndex - 1)
@@ -142,9 +114,9 @@ export function scanDoubleQuote(
 }
 
 export function scanSingleQuote(
-  source : Source, 
-  afterQuoteStart : StartIndex, 
-) : EndIndex | Err.ParserError {
+  source: Source,
+  afterQuoteStart: StartIndex,
+): EndIndex | Err.ParserError {
   SINGLE_QUOTE_MATCHER.lastIndex = afterQuoteStart;
   const result = SINGLE_QUOTE_MATCHER.exec(source);
   if (result) {
@@ -153,7 +125,7 @@ export function scanSingleQuote(
     SINGLE_QUOTE_LIBERAL_MATCHER.lastIndex = afterQuoteStart;
     const recoveryResult = SINGLE_QUOTE_LIBERAL_MATCHER.exec(source);
     if (recoveryResult) {
-      return Err.tokenError(Err.Type.InvalidString, 
+      return Err.tokenError(Err.Type.InvalidString,
         String.builder(String.Type.SINGLE)
           .setStartIndex(afterQuoteStart - 1)
           .setEndIndex(DOUBLE_QUOTE_LIBERAL_MATCHER.lastIndex - 1)
@@ -165,25 +137,25 @@ export function scanSingleQuote(
 }
 
 export function handleQuoteScanResult(
-  stringType : String.Type, 
-  source : Source, 
-  afterQuoteStart : StartIndex, 
-  quoteScanResult : EndIndex | Err.ParserError
-) : Yield.Step | Yield.Unrecoverable {
+  stringType: String.Type,
+  source: Source,
+  afterQuoteStart: StartIndex,
+  quoteScanResult: EndIndex | Err.ParserError
+): Yield.Step | Yield.Unrecoverable {
   if (typeof quoteScanResult === 'number') {
     return Yield.step()
       .buildStringToken(stringType)
-        .setStartIndex(afterQuoteStart - 1)
-        .setEndIndex(quoteScanResult)
+      .setStartIndex(afterQuoteStart - 1)
+      .setEndIndex(quoteScanResult)
       .getParent()
       .build();
-  } else if(quoteScanResult.recoverable) {
+  } else if (quoteScanResult.recoverable) {
     const error = (<Err.TokenError>quoteScanResult);
     return Yield.step()
       .addErrors(error)
       .buildStringToken(stringType)
-        .setStartIndex(afterQuoteStart - 1)
-        .setEndIndex(error.endIndex)
+      .setStartIndex(afterQuoteStart - 1)
+      .setEndIndex(error.endIndex)
       .getParent()
       .build();
   } else {
@@ -194,11 +166,11 @@ export function handleQuoteScanResult(
   }
 }
 
-export function handleSingleQuote(source : Source, startIndex : StartIndex) : Yield.Step | Yield.Unrecoverable {
+export function handleSingleQuote(source: Source, startIndex: StartIndex): Yield.Step | Yield.Unrecoverable {
   return handleQuoteScanResult(String.Type.SINGLE, source, startIndex, scanSingleQuote(source, startIndex));
 }
 
-export function handleDoubleQuote(source : Source, startIndex : StartIndex) : Yield.Step | Yield.Unrecoverable {
+export function handleDoubleQuote(source: Source, startIndex: StartIndex): Yield.Step | Yield.Unrecoverable {
   return handleQuoteScanResult(String.Type.DOUBLE, source, startIndex, scanDoubleQuote(source, startIndex));
 }
 
@@ -206,9 +178,9 @@ const ALLOWED_VARIABLE_NAME_STARTS = {
   GLOBAL: new StickyRegex(/[A-Za-z_]/yi),
   LOCAL: new StickyRegex(/[A-Za-z$]/yi),
 }
-export function maybeVariable(source : Source, nextIndex : StartIndex, varType: Variable.Type) : Yield.Push | undefined {
-  let isVariable : boolean;
-  switch(varType) {
+export function maybeVariable(source: Source, nextIndex: StartIndex, varType: Variable.Type): Yield.Push | undefined {
+  let isVariable: boolean;
+  switch (varType) {
     case Variable.Type.GLOBAL:
       isVariable = ALLOWED_VARIABLE_NAME_STARTS.GLOBAL.matchExists(source, nextIndex)
       break;
@@ -237,19 +209,19 @@ export function scanners(contentMatcher: StickyRegex) {
     content
   }
   function macroOrTwinescriptOrContent(
-    source : Source, 
-    firstIndex : StartIndex, 
-    nextIndex : StartIndex
-  ) : Yield.Step | Yield.Push {
+    source: Source,
+    firstIndex: StartIndex,
+    nextIndex: StartIndex
+  ): Yield.Step | Yield.Push {
     return maybeMacroOrTwinescript(source, nextIndex) || content(source, firstIndex, nextIndex);
   }
   function twinemarkupOrTwinescript(
-    source : Source, 
-    firstIndex : StartIndex, 
-    nextIndex : StartIndex
-  ) : Yield.Step | Yield.Push {
+    source: Source,
+    firstIndex: StartIndex,
+    nextIndex: StartIndex
+  ): Yield.Step | Yield.Push {
     return maybeTwinemarkup(source, nextIndex) || pushTwinescript();
-    function pushTwinescript() : Yield.Push {
+    function pushTwinescript(): Yield.Push {
       return Yield.push()
         .setLastIndex(nextIndex)
         .setNewState(Yield.Twinescript.State.create(Twinescript.EndMode.INDEX))
@@ -257,31 +229,31 @@ export function scanners(contentMatcher: StickyRegex) {
     }
   }
   function twinemarkupOrContent(
-    source : Source, 
-    firstIndex : StartIndex, 
-    nextIndex : StartIndex
-  ) : Yield.Step | Yield.Push {
+    source: Source,
+    firstIndex: StartIndex,
+    nextIndex: StartIndex
+  ): Yield.Step | Yield.Push {
     return maybeTwinemarkup(source, nextIndex) || content(source, firstIndex, nextIndex);
   }
   function variableOrContent(
-    variableType : Variable.Type, 
-    source : Source, 
-    firstIndex : StartIndex, 
-    nextIndex : StartIndex
-  ) : Yield.Step | Yield.Push {
+    variableType: Variable.Type,
+    source: Source,
+    firstIndex: StartIndex,
+    nextIndex: StartIndex
+  ): Yield.Step | Yield.Push {
     return maybeVariable(source, nextIndex, variableType) || content(source, firstIndex, nextIndex);
   }
   function content(
-    source : Source, 
-    firstIndex : StartIndex, 
-    nextIndex : StartIndex, 
-    lastScannedIndex ?: EndIndex
-  ) : Yield.Step {
+    source: Source,
+    firstIndex: StartIndex,
+    nextIndex: StartIndex,
+    lastScannedIndex?: EndIndex
+  ): Yield.Step {
     const endIndex = contentMatcher.getEndIndex(source, nextIndex) || (Math.min(nextIndex, source.length) - 1);
     return Yield.step()
       .buildContentToken()
-        .setStartIndex(firstIndex)
-        .setEndIndex(endIndex)
+      .setStartIndex(firstIndex)
+      .setEndIndex(endIndex)
       .getParent()
       .build()
   }
