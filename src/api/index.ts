@@ -1,4 +1,4 @@
 import { VsSugarcubeParser } from './parse';
-import { SugarcubeDoc } from './doc';
+import { ManagedSugarcubeDoc } from './managed-doc';
 
-export { VsSugarcubeParser, SugarcubeDoc }
+export { VsSugarcubeParser, ManagedSugarcubeDoc }

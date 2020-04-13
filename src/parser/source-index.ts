@@ -1,21 +1,23 @@
 import { Parser, Position, Source } from './types';
 
 export class CumulativeSourceIndex implements Parser.CumulativeSourceIndex {
-  constructor(source : Source) {
+  constructor(source: Source) {
     this.source = source;
   }
-  source : Source;
-  offsetByLineNumber : number[] = [0];
-  lineCount : number = 1;
-  newLine : RegExp = /[^\n]*\n/y;
-  maxScan : number = -1;
+  source: Source;
+  offsetByLineNumber: number[] = [0];
+  finished: boolean = false;
+  lineCount: number = 1;
+  newLine: RegExp = /[^\n\r]*(?:(?:\r?\n))/y;
+  maxScan: number = -1;
   currentMaxScan(): number {
     return this.maxScan;
   }
   scanTo(offset: number): void {
     const source = this.source;
     let maybeMatch = true;
-    while(this.newLine.lastIndex < offset && maybeMatch) {
+    this.newLine.lastIndex = Math.max(this.newLine.lastIndex, this.maxScan);
+    while (this.newLine.lastIndex < offset && maybeMatch) {
       maybeMatch = !!this.newLine.exec(source);
       if (maybeMatch) {
         this.offsetByLineNumber[this.lineCount++] = this.newLine.lastIndex;
@@ -24,6 +26,13 @@ export class CumulativeSourceIndex implements Parser.CumulativeSourceIndex {
     this.maxScan = maybeMatch ? this.newLine.lastIndex : source.length;
   }
   finish(): Parser.SourceIndex {
+    if (this.finished) {
+      throw new Error(`Calling finish on already finished cumulative source index`);
+    }
+    this.finished = true;
+    if (this.currentMaxScan() < this.source.length) {
+      this.scanTo(this.source.length);
+    }
     const copy = this.clone();
     return {
       getOffsetFromPosition: copy.getOffsetFromPosition.bind(copy),
@@ -36,6 +45,7 @@ export class CumulativeSourceIndex implements Parser.CumulativeSourceIndex {
     copy.maxScan = this.maxScan;
     copy.lineCount = this.lineCount;
     copy.newLine.lastIndex = this.newLine.lastIndex;
+    copy.finished = this.finished;
     return copy;
   }
   getPositionFromOffset(offset: number): Position {
@@ -43,19 +53,23 @@ export class CumulativeSourceIndex implements Parser.CumulativeSourceIndex {
     const charAt = offset - this.offsetByLineNumber[lineAt];
     return {
       line: lineAt,
-      character : charAt,
+      character: charAt,
     }
   }
+  /** NOTE: may return up to source.length index (which is out-of-bounds) */
   getOffsetFromPosition(position: Position): number {
-    return this.offsetByLineNumber[position.line - 1] + position.character - 1;
+    const lineOffset = this.offsetByLineNumber[position.line];
+    return lineOffset !== undefined
+      ? Math.min(lineOffset + position.character, this.source.length)
+      : this.source.length;
   }
 }
 
-function binarySearchFloorIndex(sortedNumbers : number[], target : number) : number {
+function binarySearchFloorIndex(sortedNumbers: number[], target: number): number {
   let startInc = 0;
   let endExc = sortedNumbers.length;
 
-  while(endExc - startInc > 1) {
+  while (endExc - startInc > 1) {
     const mid = Math.floor((endExc + startInc) / 2);
     if (sortedNumbers[mid] < target) {
       startInc = mid;
