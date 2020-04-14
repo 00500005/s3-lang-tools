@@ -3,8 +3,8 @@ Common definition for all rule states
 Needed as rules have cross dependencies between rule states
 */
 
-import * as Rule from "./rules";
 import * as AST from "./AST";
+import * as Rule from "./rules";
 
 // Only used as a placeholder state in the parser
 export class MainStateless implements Rule.State<MainStateless> {
@@ -56,6 +56,19 @@ export class TwinescriptState implements Rule.State<TwinescriptState> {
 
   private constructor(endMode: TwinescriptEndMode) {
     this.endMode = endMode;
+  }
+}
+export class TemplateStringState implements Rule.State<TemplateStringState> {
+  type: Rule.Type = Rule.Type.TemplateString;
+
+  static create(): TemplateStringState {
+    return new TemplateStringState();
+  }
+  clone(): TemplateStringState {
+    return new TemplateStringState();
+  }
+  equals(other: any): boolean {
+    return this.type === other.type;
   }
 }
 export enum TwinescriptEndMode {

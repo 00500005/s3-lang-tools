@@ -1,6 +1,6 @@
 
-import { Parser, Source, Token, EndIndex, StartIndex, Yield, Macro, Variable, Err, Twinemarkup, Content, Twinescript } from '../types';
-import { scanners, handleDoubleQuote, handleSingleQuote, whitespace, maybeTwinemarkup, maybeVariable } from './scanners.util';
+import { Content, EndIndex, Err, Parser, Source, StartIndex, Token, Twinescript, Variable, Yield } from '../types';
+import { handleDoubleQuote, handleSingleQuote, maybeTwinemarkup, maybeVariable, whitespace } from './scanners.util';
 import { StickyRegex } from './util';
 
 export type State = Yield.Twinescript.State;
@@ -146,6 +146,11 @@ export function runner(
         return variableOrContentChar(source, firstNonwhitespaceIndex + 1, Variable.Type.GLOBAL);
       case '_':
         return variableOrContentChar(source, firstNonwhitespaceIndex + 1, Variable.Type.LOCAL);
+      case '`':
+        return Yield.push()
+          .setLastIndex(firstNonwhitespaceIndex)
+          .setNewState(Yield.TemplateString.State.create())
+          .build()
       default:
         let numberEndIndex, jsIdEndIndex;
         if (numberEndIndex = match.number.getEndIndex(source, firstNonwhitespaceIndex)) {

@@ -3,18 +3,18 @@
  * 
  * Note, users of types should use this facade, rather than the raw types
  */
-import * as Rule from './rules';
+import { StartIndex } from '.';
 import * as AST from './AST';
 import * as TokenBuilder from './AST-facade';
-import { Token, EndIndex } from './common';
-import { VariableState, MainStateless, MacroState, TwinescriptState, TwinemarkupState, TwinescriptEndMode, MacroEndMode, RawJavascriptState, TwinemarkupMode } from './rule-states';
+import { EndIndex, Token } from './common';
 import { Err } from './errors';
-import { StartIndex } from '.';
+import { MacroEndMode, MacroState, MainStateless, RawJavascriptState, TemplateStringState, TwinemarkupMode, TwinemarkupState, TwinescriptEndMode, TwinescriptState, VariableState } from './rule-states';
+import * as Rule from './rules';
 
 export namespace Yield {
-  export const START : Rule.YieldInstance = Object.freeze(<Rule.YieldInstance>{
-    type : Rule.YieldType.START,
-    lastIndex : -1,
+  export const START: Rule.YieldInstance = Object.freeze(<Rule.YieldInstance>{
+    type: Rule.YieldType.START,
+    lastIndex: -1,
   })
   export type Push = Rule.YieldPush;
   export const Push = Rule.YieldType.PUSH;
@@ -41,6 +41,11 @@ export namespace Yield {
     export type State = MainStateless;
     export const State = MainStateless;
     export const Type = Rule.Type.Main;
+  }
+  export namespace TemplateString {
+    export type State = TemplateStringState;
+    export const State = TemplateStringState;
+    export const Type = Rule.Type.TemplateString;
   }
   export namespace Variable {
     export type State = VariableState;
@@ -90,7 +95,7 @@ export namespace Yield {
 
   type YieldTokenBuilder<T extends Rule.YieldInstance> =
     | ToMain<T>
-    | ToContent<T> 
+    | ToContent<T>
     | ToPassage<T>
     | ToMacro<T>
     | ToString<T>
@@ -98,90 +103,90 @@ export namespace Yield {
     | ToVariable<T>
     | ToTwinescript<T>
 
-  export function push() : Builder<Rule.YieldPush> {
+  export function push(): Builder<Rule.YieldPush> {
     return Builder.builder(Rule.YieldType.PUSH)
   }
-  export function pop() : Builder<Rule.YieldPop> {
+  export function pop(): Builder<Rule.YieldPop> {
     return Builder.builder(Rule.YieldType.POP)
   }
-  export function goto() : Builder<Rule.YieldGoto> {
+  export function goto(): Builder<Rule.YieldGoto> {
     return Builder.builder(Rule.YieldType.GOTO)
   }
-  export function unrecoverable() : Builder<Rule.YieldUnrecoverable> {
+  export function unrecoverable(): Builder<Rule.YieldUnrecoverable> {
     return Builder.builder(Rule.YieldType.UNRECOVERABLE);
   }
-  export function step() : Builder<Rule.YieldStep> {
+  export function step(): Builder<Rule.YieldStep> {
     return Builder.builder(Rule.YieldType.STEP)
   }
 
   export class Builder<T extends Rule.YieldInstance> {
-    static builder<T extends Rule.YieldInstance>(type : Rule.YieldType) : Builder<T> {
+    static builder<T extends Rule.YieldInstance>(type: Rule.YieldType): Builder<T> {
       return new Builder(type);
     }
-    setLastIndex(lastIndex : EndIndex) : Builder<T> {
+    setLastIndex(lastIndex: EndIndex): Builder<T> {
       this.lastIndex = lastIndex;
       return this;
     }
-    setToken(token : Token) : Builder<T> {
+    setToken(token: Token): Builder<T> {
       this.token = token;
       return this;
     }
-    setNewState(newState : Rule.GenericState) : Builder<T> {
+    setNewState(newState: Rule.GenericState): Builder<T> {
       this.newState = newState;
       return this;
     }
-    setNewStateStartIndex(startIndex ?: StartIndex) : Builder<T> {
+    setNewStateStartIndex(startIndex?: StartIndex): Builder<T> {
       this.newStateStartIndex = startIndex;
       return this;
     }
-    setCriticalError(criticalError : Err.ParserError) : Builder<T> {
+    setCriticalError(criticalError: Err.ParserError): Builder<T> {
       if (this.type !== Rule.YieldType.UNRECOVERABLE) {
         throw new Error(`critical error can only be assigned to a ${Rule.YieldType.UNRECOVERABLE} rule type`);
       }
       this.criticalError = criticalError;
       return this;
     }
-    addErrors(...errors : Err.TokenError[]) : Builder<T> {
+    addErrors(...errors: Err.TokenError[]): Builder<T> {
       this.errors.splice(this.errors.length - 1, 0, ...errors);
       return this;
     }
-    buildContentToken() : ToContent<T> {
+    buildContentToken(): ToContent<T> {
       return this.tokenBuilder = TokenBuilder.Content.builder(this);
     }
-    buildMainToken() : ToMain<T> {
+    buildMainToken(): ToMain<T> {
       return this.tokenBuilder = TokenBuilder.Main.builder(this);
     }
-    buildPassageToken() : ToPassage<T> {
+    buildPassageToken(): ToPassage<T> {
       return this.tokenBuilder = TokenBuilder.Passage.builder(this);
     }
-    buildStringToken(stringType : AST.StringType) : ToString<T> {
+    buildStringToken(stringType: AST.StringType): ToString<T> {
       return this.tokenBuilder = TokenBuilder.String.builder(stringType, this);
     }
-    buildMacroToken() : ToMacro<T> {
+    buildMacroToken(): ToMacro<T> {
       return this.tokenBuilder = TokenBuilder.Macro.builder(this);
     }
-    buildTwinemarkupToken(markupType : AST.TwinemarkupType) : ToTwinemarkup<T> {
+    buildTwinemarkupToken(markupType: AST.TwinemarkupType): ToTwinemarkup<T> {
       return this.tokenBuilder = TokenBuilder.Twinemarkup.builder(markupType, this);
     }
-    buildVariableToken(variableType : AST.VariableType) : ToVariable<T> {
+    buildVariableToken(variableType: AST.VariableType): ToVariable<T> {
       return this.tokenBuilder = TokenBuilder.Variable.builder(variableType, this);
     }
-    buildTwinescriptToken() : ToTwinescript<T> {
+    buildTwinescriptToken(): ToTwinescript<T> {
       return this.tokenBuilder = TokenBuilder.Twinescript.builder(this);
     }
 
-    private type : Rule.YieldType;
-    private lastIndex ?: EndIndex;
-    private token ?: Token;
-    private tokenBuilder ?: YieldTokenBuilder<T>;
-    private newState ?: Rule.GenericState;
-    private newStateStartIndex ?: number;
-    private criticalError ?: Err.ParserError;
-    private errors : Err.TokenError[] = []
-    build() : T {
+    private type: Rule.YieldType;
+    private lastIndex?: EndIndex;
+    private token?: Token;
+    private tokenBuilder?: YieldTokenBuilder<T>;
+    private newState?: Rule.GenericState;
+    private newStateStartIndex?: number;
+    private criticalError?: Err.ParserError;
+    private errors: Err.TokenError[] = []
+    build(): T {
       const type = this.type;
       const lastIndex = this.inferLastIndex();
-      const result : Yield.Generic = { type, lastIndex };
+      const result: Yield.Generic = { type, lastIndex };
       if (this.errors.length) {
         result.errors = this.errors;
       }
@@ -200,14 +205,14 @@ export namespace Yield {
           (<Yield.Goto & Yield.Push>result).newStateStartIndex = this.newStateStartIndex;
           break;
         case Rule.YieldType.STEP:
-          // step rules no longer require a token
-          // assert(token, 'token');
+        // step rules no longer require a token
+        // assert(token, 'token');
         case Rule.YieldType.POP: break;
         default:
           throw new Error(`unsupported yield type: '${type}'`);
       }
       return <T>result;
-      function assert<T>(value : T | undefined, name ?: string) : T {
+      function assert<T>(value: T | undefined, name?: string): T {
         if (value === undefined) {
           if (name) {
             throw new Error(`${name} is required for ${type} rule types`);
@@ -218,21 +223,21 @@ export namespace Yield {
         return <T>value;
       }
     }
-    private constructor(type : Rule.YieldType) {
+    private constructor(type: Rule.YieldType) {
       this.type = type;
     }
-    private getActualToken() : Token | undefined {
+    private getActualToken(): Token | undefined {
       if (this.token && this.tokenBuilder) {
         throw new Error(`using token setters with tokenBuilder is not supported`);
       }
       if (this.token) {
         return this.token;
-      } else if(this.tokenBuilder) {
+      } else if (this.tokenBuilder) {
         return this.tokenBuilder.build();
       }
       return undefined;
     }
-    private inferLastIndex() : number {
+    private inferLastIndex(): number {
       const token = this.getActualToken();
       if (token) {
         return Math.max(this.lastIndex || 0, token.endIndex);

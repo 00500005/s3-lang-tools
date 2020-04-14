@@ -1,32 +1,34 @@
-import { Parser, Err, Yield, Token } from "../types";
-import { Definition as MainDefinition } from './main';
-import { Definition as MacroDefinition } from './macro';
-import { Definition as VariableDefinition } from './variable';
-import { Definition as TwinescriptDefinition } from './twinescript';
-import { Definition as TwinemarkupDefinition } from './twinemarkup';
+import { Err, Parser, Token, Yield } from "../types";
 import { Definition as JavascriptDefinition } from './javascript';
+import { Definition as MacroDefinition } from './macro';
+import { Definition as MainDefinition } from './main';
+import { Definition as TemplateStringDefinition } from './template-string';
+import { Definition as TwinemarkupDefinition } from './twinemarkup';
+import { Definition as TwinescriptDefinition } from './twinescript';
+import { Definition as VariableDefinition } from './variable';
 
-export const DefinitionTable : Record<Parser.RuleType, Parser.GenericDefinition> = {
+export const DefinitionTable: Record<Parser.RuleType, Parser.GenericDefinition> = {
   [Yield.Main.Type]: MainDefinition,
   [Yield.Macro.Type]: <Parser.GenericDefinition><any>MacroDefinition,
   [Yield.Variable.Type]: <Parser.GenericDefinition><any>VariableDefinition,
   [Yield.Twinemarkup.Type]: <Parser.GenericDefinition><any>TwinemarkupDefinition,
   [Yield.Twinescript.Type]: <Parser.GenericDefinition><any>TwinescriptDefinition,
   [Yield.Javascript.Type]: <Parser.GenericDefinition><any>JavascriptDefinition,
+  [Yield.TemplateString.Type]: <Parser.GenericDefinition><any>TemplateStringDefinition,
 }
 
-export function parse({ source, stack, lastYield } : Parser.EngineInput) : Parser.EngineOutput {
-  const currentFrame : Parser.Frame = stack[stack.length - 1];
+export function parse({ source, stack, lastYield }: Parser.EngineInput): Parser.EngineOutput {
+  const currentFrame: Parser.Frame = stack[stack.length - 1];
   const definition = DefinitionTable[currentFrame.state.type];
   // Reminder: frame state may mutate in the runner
-  let runnerYield : Yield.Generic = definition.runner(
-    source, 
-    currentFrame.state, 
+  let runnerYield: Yield.Generic = definition.runner(
+    source,
+    currentFrame.state,
     lastYield,
   );
-  let criticalError : Err.ParserError | undefined = (<Yield.Unrecoverable>runnerYield).criticalError;
-  let errors : Err.TokenError[] = runnerYield.errors || [];
-  const frameToken : Token | undefined = handleTokenBuilderIfRequired();
+  let criticalError: Err.ParserError | undefined = (<Yield.Unrecoverable>runnerYield).criticalError;
+  let errors: Err.TokenError[] = runnerYield.errors || [];
+  const frameToken: Token | undefined = handleTokenBuilderIfRequired();
   manipulateStack(frameToken);
   const { lastIndex, type } = runnerYield;
   const nextYield = criticalError ?
@@ -34,9 +36,9 @@ export function parse({ source, stack, lastYield } : Parser.EngineInput) : Parse
     { type, lastIndex, token: frameToken, errors }
   return { stack, nextYield };
 
-  function manipulateStack(tokenToAdd : Token | undefined) {
+  function manipulateStack(tokenToAdd: Token | undefined) {
     let newStateStartIndex = (<Yield.Any>runnerYield).newStateStartIndex
-    switch(runnerYield.type) {
+    switch (runnerYield.type) {
       case Yield.Step:
         addTokenToCurrentFrameIfNeeded();
         break;
@@ -46,17 +48,17 @@ export function parse({ source, stack, lastYield } : Parser.EngineInput) : Parse
         break;
       case Yield.Goto:
         newStateStartIndex = stack.pop()?.startIndex;
-        // fallthrough
+      // fallthrough
       case Yield.Push:
         addTokenToCurrentFrameIfNeeded();
         const newStateYield = (<Yield.Goto & Yield.Push>runnerYield);
         stack.push(new Parser.Frame(
-          newStateYield.newState, 
+          newStateYield.newState,
           newStateStartIndex ?? runnerYield.lastIndex + 1
         ));
         break;
       case Yield.Unrecoverable:
-        // noop
+      // noop
     }
     function addTokenToCurrentFrameIfNeeded() {
       const nextFrame = stack[stack.length - 1];
@@ -65,8 +67,8 @@ export function parse({ source, stack, lastYield } : Parser.EngineInput) : Parse
       }
     }
   }
-  function handleTokenBuilderIfRequired() : Token | undefined {
-    let token : Token | undefined = runnerYield.token;
+  function handleTokenBuilderIfRequired(): Token | undefined {
+    let token: Token | undefined = runnerYield.token;
     switch (runnerYield.type) {
       case Yield.Pop:
       case Yield.Goto:

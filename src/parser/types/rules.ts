@@ -1,7 +1,7 @@
 /**
  * Note, external users should prefer the facade in ./rule-builders
  */
-import { Checkpointable, Token, Source, StartIndex, EndIndex } from "./common";
+import { Checkpointable, StartIndex, Token } from "./common";
 import { Err } from "./errors";
 
 /* 
@@ -15,8 +15,8 @@ import { Err } from "./errors";
   being the primary building block of checkpointed information
 */
 export interface State<SELF extends State<SELF>> extends Checkpointable<SELF> {
-  type : Type,
-  equals(other: any) : boolean;
+  type: Type,
+  equals(other: any): boolean;
   // subclasses should also provide instead of a constructor
   // create(...args) : SELF;
 }
@@ -30,12 +30,12 @@ export enum YieldType {
   START = "START"
 }
 export interface YieldInstance {
-  type : YieldType,
-  lastIndex : number,
-  token ?: Token,
+  type: YieldType,
+  lastIndex: number,
+  token?: Token,
   // Nontoken errors should be considered unrecoverable
   // and should use YieldUnrecoverable instead
-  errors ?: Err.TokenError[],
+  errors?: Err.TokenError[],
 }
 export interface YieldPush extends YieldInstance {
   newState: GenericState
@@ -49,7 +49,7 @@ export interface YieldPop extends YieldInstance {
 }
 export interface YieldStep extends YieldInstance {
   // Requires a token
-  token : Token,
+  token: Token,
 }
 export interface YieldUnrecoverable extends YieldInstance {
   criticalError: Err.ParserError
@@ -61,4 +61,5 @@ export enum Type {
   Twinescript = "Twinescript",
   Twinemarkup = "Twinemarkup",
   Variable = "NakedVariable",
+  TemplateString = "TemplateString"
 }
