@@ -20,7 +20,7 @@ export class MainStateless implements Rule.State<MainStateless> {
     return MainStateless.INSTANCE;
   }
 
-  private constructor() {}
+  private constructor() { }
   private static INSTANCE = new MainStateless();
 }
 export class RawJavascriptState implements Rule.State<RawJavascriptState> {
@@ -36,25 +36,25 @@ export class RawJavascriptState implements Rule.State<RawJavascriptState> {
     return RawJavascriptState.INSTANCE;
   }
 
-  private constructor() {}
+  private constructor() { }
   private static INSTANCE = new RawJavascriptState();
 }
 export class TwinescriptState implements Rule.State<TwinescriptState> {
-  type : Rule.Type = Rule.Type.Twinescript;
-  endMode : TwinescriptEndMode;
+  type: Rule.Type = Rule.Type.Twinescript;
+  endMode: TwinescriptEndMode;
 
-  static create(endMode : TwinescriptEndMode): TwinescriptState {
+  static create(endMode: TwinescriptEndMode): TwinescriptState {
     return new TwinescriptState(endMode);
   }
   clone(): TwinescriptState {
     return new TwinescriptState(this.endMode);
   }
   equals(other: any): boolean {
-    return this.endMode === other.endMode 
+    return this.endMode === other.endMode
       && this.type === other.type;
   }
 
-  private constructor(endMode : TwinescriptEndMode) {
+  private constructor(endMode: TwinescriptEndMode) {
     this.endMode = endMode;
   }
 }
@@ -71,32 +71,32 @@ export enum MacroEndMode {
   MACROENTRY = '>>'
 }
 export class MacroState implements Rule.State<MacroState> {
-  type : Rule.Type = Rule.Type.Macro;
-  endMode : MacroEndMode;
-  macroType ?: AST.MacroType;
-  macroName ?: string;
+  type: Rule.Type = Rule.Type.Macro;
+  endMode: MacroEndMode;
+  macroType?: AST.MacroType;
+  macroName?: string;
 
-  static create(endMode : MacroEndMode): MacroState {
+  static create(endMode: MacroEndMode): MacroState {
     return new MacroState(endMode);
   }
   clone(): MacroState {
     return new MacroState(this.endMode);
   }
   equals(other: any): boolean {
-    return this.endMode === other.endMode 
+    return this.endMode === other.endMode
       && this.type === other.type;
   }
 
-  private constructor(endMode : MacroEndMode) {
+  private constructor(endMode: MacroEndMode) {
     this.endMode = endMode;
   }
 }
 export class VariableState implements Rule.State<VariableState> {
-  type : Rule.Type = Rule.Type.Variable;
-  variableType : AST.VariableType;
-  dot : boolean = false;
+  type: Rule.Type = Rule.Type.Variable;
+  variableType: AST.VariableType;
+  dot: boolean = false;
 
-  static create(variableType : AST.VariableType): VariableState {
+  static create(variableType: AST.VariableType): VariableState {
     return new VariableState(variableType);
   }
   equals(other: any): boolean {
@@ -110,42 +110,49 @@ export class VariableState implements Rule.State<VariableState> {
     return state;
   }
 
-  private constructor(variableType : AST.VariableType) {
+  private constructor(variableType: AST.VariableType) {
     this.variableType = variableType;
   }
 }
 export enum TwinemarkupMode {
   // Mode describes the next expected token
   LINK_START = "LINK_START",
+  LINK_LINK = "LINK_LINK",
   IMG_START = "IMG_START",
+  IMG_IMG = "IMG_IMG",
   IMG_LINK_OR_END = "IMG_LINK_OR_END",
   SETTER_OR_END = "SETTER_OR_END",
   TWINESCRIPT_END = "END",
   NO_MORE = "NO_MORE",
 }
 export class TwinemarkupState implements Rule.State<TwinemarkupState> {
-  type : Rule.Type = Rule.Type.Twinemarkup;
-  markupType : AST.TwinemarkupType;
-  nextMode : TwinemarkupMode;
-  link ?: string;
-  title ?: string;
-  imgpath ?: string;
-  static create(markupType : AST.TwinemarkupType): TwinemarkupState {
-    return  new TwinemarkupState(markupType);
+  type: Rule.Type = Rule.Type.Twinemarkup;
+  markupType: AST.TwinemarkupType;
+  nextMode: TwinemarkupMode;
+  link: AST.Token[] = [];
+  title: AST.Token[] = [];
+  imgpath: AST.Token[] = [];
+  setter?: AST.TwinescriptToken;
+  static create(markupType: AST.TwinemarkupType): TwinemarkupState {
+    return new TwinemarkupState(markupType);
   }
   equals(other: any): boolean {
     return this.markupType === other.markupType
       && this.nextMode === other.mode
       && this.type === other.type;
+    /** @todo: implement proper equality for link,title,imgpath props */
   }
   clone(): TwinemarkupState {
     const newState = new TwinemarkupState(this.markupType);
     newState.nextMode = this.nextMode;
+    newState.title = this.title
+    newState.link = this.link
+    newState.imgpath = this.imgpath
     return newState;
   }
-  private constructor(markupType : AST.TwinemarkupType) {
+  private constructor(markupType: AST.TwinemarkupType) {
     this.markupType = markupType;
-    this.nextMode = markupType === AST.TwinemarkupType.IMAGE ? 
+    this.nextMode = markupType === AST.TwinemarkupType.IMAGE ?
       TwinemarkupMode.IMG_START : TwinemarkupMode.LINK_START
   }
 }

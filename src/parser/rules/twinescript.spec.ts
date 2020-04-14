@@ -23,11 +23,11 @@ describe('twinescript', () => {
       });
     });
     describe('tokens', () => {
-      const state : State = State.create(EndMode.MACROLIKE);
+      const state: State = State.create(EndMode.MACROLIKE);
       const run = Setup.createDefaultRunner(runner, () => state);
-      function fixto(count : number, params: any[][]) : any[] {
-        const filler : undefined[] = [];
-        for(let i=0; i < count; i++) { filler[i] = undefined; }
+      function fixto(count: number, params: any[][]): any[] {
+        const filler: undefined[] = [];
+        for (let i = 0; i < count; i++) { filler[i] = undefined; }
         const fixedParams = params.map(p => {
           return [...p, ...filler].slice(0, count);
         })
@@ -113,7 +113,7 @@ describe('twinescript', () => {
         [TokenType.Content, 'gte'],
         [TokenType.Content, 'lt'],
         [TokenType.Content, 'lte'],
-      ]))('should recognize %s tokens given: "%s"', (tokenType : TokenType | null, source : string, expectedTokenMatch ?: string, pushedState ?: Yield.GenericState, yieldType ?: Yield.Type) => {
+      ]))('should recognize %s tokens given: "%s"', (tokenType: TokenType | null, source: string, expectedTokenMatch?: string, pushedState?: Yield.GenericState, yieldType?: Yield.Type) => {
         const startOfToken = source.length - source.trimLeft().length;
         const result = run(source);
         Expects.anyYield(result)

@@ -5,8 +5,8 @@ import { Token } from "./common";
 
 export { Token };
 export enum TwinemarkupType {
-  IMAGE="IMAGE",
-  LINK="LINK"
+  IMAGE = "IMAGE",
+  LINK = "LINK"
 }
 export enum StringType {
   DOUBLE = '"',
@@ -23,36 +23,36 @@ export interface MainToken extends Token {
 }
 export type StatementToken = ContentToken | PassageDefinitionToken | MacroToken | TwinemarkupToken | VariableToken | TwinescriptToken;
 export interface ContentToken extends Token { }
-export interface StringToken extends Token { 
+export interface StringToken extends Token {
   stringType: StringType,
 }
 export interface PassageDefinitionToken extends Token {
   name: string
 }
 export type MacroArgToken = TwinescriptToken | TwinemarkupToken | VariableToken | StringToken | ContentToken;
-export interface MacroToken extends Token { 
+export interface MacroToken extends Token {
   macroType: MacroType,
   name: string,
   args: MacroArgToken[],
   content: StatementToken[],
 }
-export interface TwinemarkupToken extends Token { 
+export interface TwinemarkupToken extends Token {
   markupType: TwinemarkupType,
-  link?: string,
-  title?: string,
+  link?: Token[],
+  title?: Token[],
   setter?: TwinescriptToken,
-  imagePath?: string,
+  imagePath?: Token[],
 }
 export enum VariableType {
   LOCAL = "_",
   GLOBAL = "$",
 }
 export type VariableNamePartToken = TwinescriptToken | ContentToken;
-export interface VariableToken extends Token { 
+export interface VariableToken extends Token {
   variableType: VariableType,
   variablePath: VariableNamePartToken[],
 }
 export type TwinescriptContentToken = VariableToken | TwinemarkupToken | TwinescriptToken | StringToken | ContentToken;
-export interface TwinescriptToken extends Token { 
+export interface TwinescriptToken extends Token {
   content: TwinescriptContentToken[]
 }

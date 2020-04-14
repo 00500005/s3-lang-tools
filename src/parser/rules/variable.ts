@@ -1,6 +1,6 @@
 
-import { Parser, Source, Token, EndIndex, StartIndex, Yield, Macro, Variable, Err, Twinemarkup, Content, Twinescript } from '../types';
-import { scanners, handleDoubleQuote, handleSingleQuote, whitespace, maybeTwinemarkup } from './scanners.util';
+import { Content, EndIndex, Err, Parser, Source, StartIndex, Token, Twinescript, Variable, Yield } from '../types';
+import { scanners, whitespace } from './scanners.util';
 import { StickyRegex } from './util';
 
 export type State = Yield.Variable.State;
@@ -11,12 +11,12 @@ export type VariableType = Yield.Variable.VariableType;
 export const VariableType = Yield.Variable.VariableType;
 
 export function tokenBuilder(
-  source : Source,
-  state : State,
-  tokens : Token[],
-  startIndex : StartIndex,
-  endIndex : EndIndex,
-) : Parser.TokenBuilderResult<TokenType> { 
+  source: Source,
+  state: State,
+  tokens: Token[],
+  startIndex: StartIndex,
+  endIndex: EndIndex,
+): Parser.TokenBuilderResult<TokenType> {
   return {
     result: Variable.builder(state.variableType)
       .setStartIndex(startIndex)
@@ -29,15 +29,15 @@ export function tokenBuilder(
 const variableNameMatcher = new StickyRegex(/[A-Za-z$_][A-Za-z0-9$_]*/y);
 const allowedAfterDot = new StickyRegex(/[A-Za-z$_]/y);
 const {
-    content
-// Note: whitespace is *not* considered content inside of variables
-// arg tokens will be whitespace delimited
+  content
+  // Note: whitespace is *not* considered content inside of variables
+  // arg tokens will be whitespace delimited
 } = scanners(variableNameMatcher);
 export function runner(
-  source : Source, 
-  state : State,
-  lastRule : Yield.Generic,
-) : Yield.Generic {
+  source: Source,
+  state: State,
+  lastRule: Yield.Generic,
+): Yield.Generic {
   /**
    * NOTE: as this is a raw variable that may be in mixed content,
    * whitespace is not allowed between tokens
@@ -47,15 +47,15 @@ export function runner(
   if (endOfNameIndex) {
     state.dot = false;
     const afterName = whitespace.getNextStart(source, endOfNameIndex + 1) || endOfNameIndex + 1;
-    switch(source[afterName]) {
+    switch (source[afterName]) {
       case '[':
         return Yield.push()
           .setNewState(Yield.Twinescript.State.create(Yield.Twinescript.EndMode.INDEX))
           .setLastIndex(afterName)
           .buildContentToken()
-            .setEndIndex(endOfNameIndex)
-            .setStartIndex(firstIndex)
-            .getParent()
+          .setEndIndex(endOfNameIndex)
+          .setStartIndex(firstIndex)
+          .getParent()
           .build();
       case '.':
         const hasNextMatch = allowedAfterDot.matchExists(source, afterName + 1);
@@ -64,19 +64,19 @@ export function runner(
           return Yield.step()
             .setLastIndex(afterName)
             .buildContentToken()
-              .setEndIndex(endOfNameIndex)
-              .setStartIndex(firstIndex)
-              .getParent()
+            .setEndIndex(endOfNameIndex)
+            .setStartIndex(firstIndex)
+            .getParent()
             .build()
         }
-        // else fall through
+      // else fall through
       default:
         return Yield.pop()
           .setLastIndex(afterName - 1)
           .buildContentToken()
-            .setEndIndex(endOfNameIndex)
-            .setStartIndex(firstIndex)
-            .getParent()
+          .setEndIndex(endOfNameIndex)
+          .setStartIndex(firstIndex)
+          .getParent()
           .build()
     }
   } else if (state.dot) {
@@ -100,8 +100,8 @@ export function runner(
   }
 }
 
-export const Definition : Parser.Definition<State, TokenType> = {
-    type : Yield.Macro.Type,
-    runner,
-    tokenBuilder,
+export const Definition: Parser.Definition<State, TokenType> = {
+  type: Yield.Macro.Type,
+  runner,
+  tokenBuilder,
 }
